@@ -9,6 +9,7 @@ import (
 )
 
 func (s *MCPService) Chat(context string) (string, error) {
+	s.Messages = append(s.Messages, map[string]string{"role": "user", "content": context})
 	// 提取信息
 	requestBodyJSON, err := s.extract_keyword(context)
 	if err != nil {
@@ -27,15 +28,21 @@ func (s *MCPService) Chat(context string) (string, error) {
 		fmt.Println("读取响应体错误:", err)
 		return "", err
 	}
+	fmt.Println("响应内容:", string(respBody))
+	s.Messages = append(s.Messages, map[string]string{"role": "assistant", "content": string(respBody)})
 	// 获取结果
-	result, err := s.extract_result(respBody)
+	answer, err := s.get_answer(respBody)
 	if err != nil {
 		fmt.Println("解析响应结果错误:", err)
 		return "", err
 	}
-	// 打印响应内容
-	fmt.Println("响应内容:", string(respBody))
-	// 如果没有找到响应内容，返回一个空字符串
+	result, err := s.extract_result(answer)
+	// 打印结果
+	fmt.Println("结果:", result)
+	if err != nil {
+		fmt.Println("解析结果错误:", err)
+		return "", err
+	}
 	return result, nil
 }
 
