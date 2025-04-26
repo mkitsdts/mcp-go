@@ -21,10 +21,10 @@ type Tool struct {
 // 核心服务
 // 包含上下文协议、工具、消息等
 type MCPService struct {
-	Client   http.Client
-	Host     string
-	Name     string
-	Key      string
-	Tools    []Tool
-	Messages []map[string]string
+	Client  http.Client
+	Host    string
+	Name    string
+	Key     string
+	Tools   []Tool
+	Context string
 }

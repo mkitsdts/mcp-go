@@ -9,7 +9,6 @@ import (
 )
 
 func (s *MCPService) Chat(context string) (string, error) {
-	s.Messages = append(s.Messages, map[string]string{"role": "user", "content": context})
 	// 提取信息
 	requestBodyJSON, err := s.extract_keyword(context)
 	if err != nil {
@@ -22,6 +21,7 @@ func (s *MCPService) Chat(context string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+	s.Context = context
 	// 读取响应体
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -29,7 +29,6 @@ func (s *MCPService) Chat(context string) (string, error) {
 		return "", err
 	}
 	fmt.Println("响应内容:", string(respBody))
-	s.Messages = append(s.Messages, map[string]string{"role": "assistant", "content": string(respBody)})
 	// 获取结果
 	answer, err := s.get_answer(respBody)
 	if err != nil {
@@ -64,7 +63,6 @@ func NewMCPService(name string, host string) *MCPService {
 	} else {
 		fmt.Println("Model server connected successfully")
 	}
-	s.Messages = append(s.Messages, map[string]string{"role": "system", "content": system_prompt})
 	return s
 }
 
