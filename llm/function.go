@@ -1,15 +1,11 @@
-package lmstudio
+package mcp
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 )
 
-func (s *MCPService) Chat(context string) (string, error) {
-	// 把字符串转换成io.Reader
-
+func (s *MCPService) extract_keyword(context string) ([]byte, error) {
 	messages := []map[string]string{
 		{"role": "system", "content": system_prompt},
 		{"role": "user", "content": context},
@@ -18,7 +14,7 @@ func (s *MCPService) Chat(context string) (string, error) {
 	// 转换为JSON
 	messagesJSON, err := json.Marshal(messages)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// 创建完整请求体
@@ -27,49 +23,18 @@ func (s *MCPService) Chat(context string) (string, error) {
 		"messages":    json.RawMessage(messagesJSON),
 		"temperature": 0.1,
 		"stream":      false,
-		"tools": []map[string]any{
-			{
-				"type": "function", // 必须添加这个字段，表明这是函数类型的工具
-				"function": map[string]any{
-					"name":        "weather_query",
-					"description": "search weather by location",
-					"parameters": map[string]any{ // 不是inputSchema，应该是parameters
-						"type": "object", // 需要指定这个字段
-						"properties": map[string]any{
-							"latitude": map[string]any{
-								"type":        "number",
-								"description": "latitude coordinate",
-							},
-							"longitude": map[string]any{
-								"type":        "number",
-								"description": "longitude coordinate",
-							},
-						},
-						"required": []string{"latitude", "longitude"},
-					},
-				},
-			},
-		},
+		"tools":       s.Tools,
 	}
 	// 转换为JSON
 	requestBodyJSON, err := json.Marshal(requestBody)
 	if err != nil {
 		fmt.Println("转换请求体为JSON错误:", err)
-		return "", err
+		return nil, err
 	}
+	return requestBodyJSON, nil
+}
 
-	// 发送 POST 请求
-	resp, err := s.Client.Post(s.Host+"/v1/chat/completions", "application/json", bytes.NewBuffer(requestBodyJSON))
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	// 读取响应体
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("读取响应体错误:", err)
-		return "", err
-	}
+func (s *MCPService) extract_result(respBody []byte) (string, error) {
 	// 解析 JSON 响应
 	var result map[string]any
 	if err := json.Unmarshal(respBody, &result); err != nil {
@@ -78,7 +43,7 @@ func (s *MCPService) Chat(context string) (string, error) {
 	}
 	// 打印响应内容
 	fmt.Println("响应内容:", string(respBody))
-	// 检查是否有错误信息
+	// 检查是否有响应内容
 	if errMsg, ok := result["error"]; ok {
 		if errMsgMap, ok := errMsg.(map[string]any); ok {
 			if message, ok := errMsgMap["message"]; ok {
@@ -87,56 +52,48 @@ func (s *MCPService) Chat(context string) (string, error) {
 			}
 		}
 	}
-	// 检查是否有响应内容
+	// 检查是否调用工具
 	if choices, ok := result["choices"]; ok {
 		if choicesArray, ok := choices.([]any); ok && len(choicesArray) > 0 {
 			if choice, ok := choicesArray[0].(map[string]any); ok {
-				if message, ok := choice["message"]; ok {
-					if toolCalls, ok := message.(map[string]any)["tool_calls"]; ok {
-						if function, ok := toolCalls.([]any)[0].(map[string]any)["function"]; ok {
-							if arguments, ok := function.(map[string]any)["arguments"]; ok {
-								// 解析函数参数
-								argumentsJSON, err := json.Marshal(arguments)
-								if err != nil {
-									fmt.Println("解析函数参数错误:", err)
-									return "", err
+				if finishReason, ok := choice["finish_reason"]; ok && finishReason == "tool_calls" {
+					if message, ok := choice["message"]; ok {
+						if messageMap, ok := message.(map[string]any); ok {
+							if functionCall, ok := messageMap["function_call"]; ok {
+								if functionCallMap, ok := functionCall.(map[string]any); ok {
+									if name, ok := functionCallMap["name"]; ok {
+										if arguments, ok := functionCallMap["arguments"]; ok {
+											// 调用工具
+											for i := range s.Tools {
+												if s.Tools[i].Function.Name == name {
+													// 解析参数
+													var args map[string]any
+													if err := json.Unmarshal([]byte(arguments.(string)), &args); err != nil {
+														fmt.Println("解析参数错误:", err)
+														return "", err
+													}
+													// 调用工具
+													result, err := s.Tools[i].Handler(args)
+													if err != nil {
+														fmt.Println("调用工具错误:", err)
+														return "", err
+													}
+													// 返回结果给大模型
+
+													return fmt.Sprintf("%v", result), nil
+												}
+											}
+										}
+									}
 								}
-								// 将函数参数转换为字符串
-								argumentsStr, err := json.MarshalIndent(arguments, "", "  ")
-								if err != nil {
-									fmt.Println("转换函数参数为字符串错误:", err)
-									return "", err
-								}
-								// 打印函数参数
-								fmt.Println("函数参数:", string(argumentsStr))
-								// 解析函数参数为 map
-								var functionArgs map[string]any
-								if err := json.Unmarshal(argumentsJSON, &functionArgs); err != nil {
-									fmt.Println("解析函数参数为 map 错误:", err)
-									return "", err
-								}
-								// 获取经纬度
-								latitude, ok := functionArgs["latitude"].(float64)
-								if !ok {
-									fmt.Println("获取纬度错误")
-									return "", fmt.Errorf("error: 获取纬度错误")
-								}
-								longitude, ok := functionArgs["longitude"].(float64)
-								if !ok {
-									fmt.Println("获取经度错误")
-									return "", fmt.Errorf("error: 获取经度错误")
-								}
-								// 打印经纬度
-								fmt.Printf("经度: %f, 纬度: %f\n", longitude, latitude)
 							}
-						} else {
-							fmt.Println("没有找到函数调用")
 						}
 					}
+				} else if content, ok := choice["content"]; ok {
+					return content.(string), nil
 				}
 			}
 		}
 	}
-	// 如果没有找到响应内容，返回一个空字符串
 	return "", nil
 }
