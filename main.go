@@ -16,6 +16,8 @@ func getWeather(args map[string]any) (string, error) {
 		return "", fmt.Errorf("缺少有效的经纬度参数")
 	}
 
+	fmt.Println("实际经纬度:", latitude, longitude)
+
 	// 模拟天气数据
 	var weather string
 	if latitude > 30 && longitude > 100 {
@@ -32,13 +34,13 @@ func getWeather(args map[string]any) (string, error) {
 
 func main() {
 	// 初始化服务
-	s := mcp.NewMCPService("gemma-3-12b-it", "http://localhost:1234")
+	s := mcp.NewMCPService("gemma-3-12b-it", "http://localhost:1234/v1/chat/completions", "")
 
 	// 添加天气查询工具
 	s.AddTool(
 		"weather_query",
 		"查询指定位置的天气情况",
-		mcp.Para{
+		mcp.Paramaters{
 			Type: "object",
 			Properties: map[string]any{
 				"latitude": map[string]any{

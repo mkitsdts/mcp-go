@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 )
 
 func (s *MCPService) extract_keyword(context string) ([]byte, error) {
@@ -37,15 +38,15 @@ func (s *MCPService) extract_keyword(context string) ([]byte, error) {
 	return requestBodyJSON, nil
 }
 
-func (s *MCPService) get_answer(respBody []byte) (string, error) {
+func (s *MCPService) get_answer(respBody *[]byte) (string, error) {
 	// 解析 JSON 响应
 	var result map[string]any
-	if err := json.Unmarshal(respBody, &result); err != nil {
+	if err := json.Unmarshal(*respBody, &result); err != nil {
 		fmt.Println("解析 JSON 响应错误:", err)
 		return "", err
 	}
 	// 打印响应内容
-	fmt.Println("响应内容:", string(respBody))
+	fmt.Println("响应内容:", string(*respBody))
 	// 检查是否有响应内容
 	if errMsg, ok := result["error"]; ok {
 		if errMsgMap, ok := errMsg.(map[string]any); ok {
@@ -156,7 +157,7 @@ func (s *MCPService) extract_result(result string) (string, error) {
 		return "", err
 	}
 	// 发送请求
-	resp, err := s.Client.Post(s.Host+"/v1/chat/completions", "application/json", bytes.NewBuffer(requestBodyJSON))
+	resp, err := s.Client.Post(s.Host, request_content_type, bytes.NewBuffer(requestBodyJSON))
 	if err != nil {
 		fmt.Println("发送请求错误:", err)
 		return "", err
@@ -206,4 +207,42 @@ func (s *MCPService) extract_result(result string) (string, error) {
 	}
 	fmt.Println("没有找到有效的响应内容")
 	return "", nil
+}
+
+func (s *MCPService) try_get_model_info() bool {
+	resp, err := s.Client.Get(s.Host + s.Name)
+	if err != nil {
+		return false
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return false
+	}
+	fmt.Println(string(body))
+	return resp.StatusCode == http.StatusOK
+}
+
+func (s *MCPService) sendContextToModel(data *[]byte) (*[]byte, error) {
+	// 发送 POST 请求
+	req, err := http.NewRequest("POST", s.Host, bytes.NewBuffer(*data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", request_content_type)
+	if s.Key != "" {
+		req.Header.Set("Authorization", "Bearer "+s.Key)
+	}
+	resp, err := s.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	// 读取响应体
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("读取响应体错误:", err)
+		return nil, err
+	}
+	return &respBody, nil
 }

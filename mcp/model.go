@@ -2,7 +2,7 @@ package mcp
 
 import "net/http"
 
-type Para struct {
+type Paramaters struct {
 	Type       string         `json:"type"`
 	Properties map[string]any `json:"properties"`
 	Required   []string       `json:"required"`
@@ -11,9 +11,9 @@ type Para struct {
 type Tool struct {
 	Type     string `json:"type"`
 	Function struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Parameters  Para   `json:"parameters"`
+		Name        string     `json:"name"`
+		Description string     `json:"description"`
+		Para        Paramaters `json:"parameters"`
 	} `json:"function"`
 	Handler func(args map[string]any) (string, error) `json:"-"`
 }

@@ -1,9 +1,7 @@
 package mcp
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 )
@@ -15,20 +13,14 @@ func (s *MCPService) Chat(context string) (string, error) {
 		fmt.Println("转换请求体为JSON错误:", err)
 		return "", err
 	}
-	// 发送 POST 请求
-	resp, err := s.Client.Post(s.Host+"/v1/chat/completions", "application/json", bytes.NewBuffer(requestBodyJSON))
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
+	// 发送 POST 请求 读取响应体
 	s.Context = context
-	// 读取响应体
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := s.sendContextToModel(&requestBodyJSON)
 	if err != nil {
 		fmt.Println("读取响应体错误:", err)
 		return "", err
 	}
-	fmt.Println("响应内容:", string(respBody))
+	fmt.Println("响应内容:", string(*respBody))
 	// 获取结果
 	answer, err := s.get_answer(respBody)
 	if err != nil {
@@ -45,10 +37,11 @@ func (s *MCPService) Chat(context string) (string, error) {
 	return result, nil
 }
 
-func NewMCPService(name string, host string) *MCPService {
+func NewMCPService(name string, host string, key string) *MCPService {
 	s := &MCPService{}
 	s.Name = name
 	s.Host = host
+	s.Key = ""
 	s.Client = http.Client{}
 	s.Client.Timeout = 60 * time.Second
 	s.Client.Transport = &http.Transport{
@@ -66,17 +59,17 @@ func NewMCPService(name string, host string) *MCPService {
 	return s
 }
 
-func (s *MCPService) AddTool(name string, description string, parameters Para, handler func(args map[string]any) (string, error)) {
+func (s *MCPService) AddTool(name string, description string, parameters Paramaters, handler func(args map[string]any) (string, error)) {
 	tool := Tool{
 		Type: "function",
 		Function: struct {
-			Name        string `json:"name"`
-			Description string `json:"description"`
-			Parameters  Para   `json:"parameters"`
+			Name        string     `json:"name"`
+			Description string     `json:"description"`
+			Para        Paramaters `json:"parameters"`
 		}{
 			Name:        name,
 			Description: description,
-			Parameters:  parameters,
+			Para:        parameters,
 		},
 		Handler: handler,
 	}
