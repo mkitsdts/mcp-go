@@ -134,7 +134,7 @@ func (s *MCPService) extract_result(result string) (string, error) {
 	messages := []map[string]string{
 		{"role": "system", "content": system_extarct_answer_prompt},
 		{"role": "user", "content": s.Context},
-		{"role": "tool", "content": "工具结果:" + result},
+		{"role": "user", "content": "工具结果:" + result},
 	}
 	fmt.Println("Request data:", messages)
 	// 转换为JSON
@@ -156,25 +156,16 @@ func (s *MCPService) extract_result(result string) (string, error) {
 		fmt.Println("转换请求体为JSON错误:", err)
 		return "", err
 	}
-	// 发送请求
-	resp, err := s.Client.Post(s.Host, request_content_type, bytes.NewBuffer(requestBodyJSON))
-	if err != nil {
-		fmt.Println("发送请求错误:", err)
-		return "", err
-	}
-	defer resp.Body.Close()
 	// 读取响应体
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := s.sendContextToModel(&requestBodyJSON)
 	if err != nil {
 		fmt.Println("读取响应体错误:", err)
 		return "", err
 	}
-	// 转换成字符串
-	resultString := string(respBody)
-
+	fmt.Println("响应内容:", string(*respBody))
 	// 解析 JSON 响应
 	var resultMap map[string]any
-	if err := json.Unmarshal([]byte(resultString), &resultMap); err != nil {
+	if err := json.Unmarshal(*respBody, &resultMap); err != nil {
 		fmt.Println("解析 JSON 响应错误:", err)
 		return "", err
 	}
@@ -198,7 +189,7 @@ func (s *MCPService) extract_result(result string) (string, error) {
 		} `json:"choices"`
 	}
 	var resultObj Result
-	if err := json.Unmarshal([]byte(resultString), &resultObj); err != nil {
+	if err := json.Unmarshal(*respBody, &resultObj); err != nil {
 		fmt.Println("解析 JSON 响应错误:", err)
 		return "", err
 	}
@@ -207,20 +198,6 @@ func (s *MCPService) extract_result(result string) (string, error) {
 	}
 	fmt.Println("没有找到有效的响应内容")
 	return "", nil
-}
-
-func (s *MCPService) try_get_model_info() bool {
-	resp, err := s.Client.Get(s.Host + s.Name)
-	if err != nil {
-		return false
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return false
-	}
-	fmt.Println(string(body))
-	return resp.StatusCode == http.StatusOK
 }
 
 func (s *MCPService) sendContextToModel(data *[]byte) (*[]byte, error) {
@@ -233,6 +210,7 @@ func (s *MCPService) sendContextToModel(data *[]byte) (*[]byte, error) {
 	if s.Key != "" {
 		req.Header.Set("Authorization", "Bearer "+s.Key)
 	}
+	fmt.Println("请求头:", req.Header)
 	resp, err := s.Client.Do(req)
 	if err != nil {
 		return nil, err

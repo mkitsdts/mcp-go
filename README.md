@@ -22,7 +22,7 @@ service := mcp.NewMCPService("gemma-3-12b-it", "http://localhost:1234/v1/chat/co
 
 ## 新增更新：
 
-1、添加了对带有 api key 的大模型的支持（目前仅在 LMStudio 部署的大模型测试，其他大模型可行性未知）
+1、添加了对带有 api key 的大模型的支持（目前已经通过 deepseek api 以及本地 LMStudio 部署的大模型测试）
 
 2、优化了注册工具的方式，可以一个函数注册整个工具
 
@@ -41,3 +41,5 @@ service := mcp.NewMCPService("gemma-3-12b-it", "http://localhost:1234/v1/chat/co
 2、支持更多上下文存储
 
 3、测试仅局限于本地 LMStudio 部署的大模型，未来要适配更多大模型（因为代码结构过于紧凑，后续会重构，适配更多大模型）
+
+4、错误检测过于简陋，后续重点加强错误检测，避免排错消耗大量精力

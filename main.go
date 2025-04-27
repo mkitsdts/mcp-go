@@ -34,7 +34,7 @@ func getWeather(args map[string]any) (string, error) {
 
 func main() {
 	// 初始化服务
-	s := mcp.NewMCPService("gemma-3-12b-it", "http://localhost:1234/v1/chat/completions", "")
+	s := mcp.NewMCPService("deepseek-chat", "https://api.deepseek.com/chat/completions", "sk-80b78645422dfhxcvad239b7b3")
 
 	// 添加天气查询工具
 	s.AddTool(

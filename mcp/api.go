@@ -41,7 +41,7 @@ func NewMCPService(name string, host string, key string) *MCPService {
 	s := &MCPService{}
 	s.Name = name
 	s.Host = host
-	s.Key = ""
+	s.Key = key
 	s.Client = http.Client{}
 	s.Client.Timeout = 60 * time.Second
 	s.Client.Transport = &http.Transport{
@@ -50,11 +50,6 @@ func NewMCPService(name string, host string, key string) *MCPService {
 		DisableCompression:    true,
 		ForceAttemptHTTP2:     true,
 		ExpectContinueTimeout: 10 * time.Second,
-	}
-	if !s.try_get_model_info() {
-		panic("Failed to connect to model server")
-	} else {
-		fmt.Println("Model server connected successfully")
 	}
 	return s
 }
