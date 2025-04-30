@@ -1,7 +1,5 @@
 package mcp
 
-import "net/http"
-
 type Paramaters struct {
 	Type       string         `json:"type"`
 	Properties map[string]any `json:"properties"`
@@ -9,22 +7,24 @@ type Paramaters struct {
 }
 
 type Tool struct {
-	Type     string `json:"type"`
-	Function struct {
-		Name        string     `json:"name"`
-		Description string     `json:"description"`
-		Para        Paramaters `json:"parameters"`
-	} `json:"function"`
-	Handler func(args map[string]any) (string, error) `json:"-"`
+	Type     string                                    `json:"type"`
+	Function req_fn                                    `json:"function"`
+	Handler  func(args map[string]any) (string, error) `json:"-"`
 }
 
-// 核心服务
-// 包含上下文协议、工具、消息等
-type MCPService struct {
-	Client  http.Client
-	Host    string
-	Name    string
-	Key     string
-	Tools   []Tool
-	Context string
+type req_fn struct {
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Para        Paramaters `json:"parameters"`
+}
+
+type resp_fn struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
+type tool_call struct {
+	Id       string  `json:"id"`
+	Tp       string  `json:"type"`
+	Function resp_fn `json:"function"`
 }

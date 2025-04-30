@@ -34,10 +34,10 @@ func getWeather(args map[string]any) (string, error) {
 
 func main() {
 	// 初始化服务
-	s := mcp.NewMCPService("deepseek-chat", "https://api.deepseek.com/chat/completions", "sk-80b78645422dfhxcvad239b7b3")
-
+	s := mcp.NewMCPService("deepseek-chat", "https://api.deepseek.com/chat/completions", mcp.API_KEY)
+	dialog := s.NewDialogue()
 	// 添加天气查询工具
-	s.AddTool(
+	dialog.AddTool(
 		"weather_query",
 		"查询指定位置的天气情况",
 		mcp.Paramaters{
@@ -59,7 +59,7 @@ func main() {
 
 	// 测试1：直接查询天气
 	fmt.Println("\n--- 测试1：查询北京天气 ---")
-	resp1, err := s.Chat("北京今天的天气怎么样？")
+	resp1, err := dialog.Chat("北京今天的天气怎么样？")
 	if err != nil {
 		log.Fatalf("查询失败: %v", err)
 	}

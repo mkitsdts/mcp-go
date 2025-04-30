@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func (s *MCPService) Chat(context string) (string, error) {
+func (s *MCPClient) Chat(context string) (string, error) {
 	// 提取信息
 	requestBodyJSON, err := s.extract_keyword(context)
 	if err != nil {
@@ -14,15 +14,16 @@ func (s *MCPService) Chat(context string) (string, error) {
 		return "", err
 	}
 	// 发送 POST 请求 读取响应体
-	s.Context = context
-	respBody, err := s.sendContextToModel(&requestBodyJSON)
+	s.context = append(s.context, req_mess{Role: "user", Content: context})
+	respBody, err := s.sendcontextToModel(&requestBodyJSON)
 	if err != nil {
 		fmt.Println("读取响应体错误:", err)
 		return "", err
 	}
 	fmt.Println("响应内容:", string(*respBody))
 	// 获取结果
-	answer, err := s.get_answer(respBody)
+	answer, err := s.get_tool_select(respBody)
+	s.context = append(s.context, req_mess{Role: "user", Content: answer})
 	if err != nil {
 		fmt.Println("解析响应结果错误:", err)
 		return "", err
@@ -39,22 +40,14 @@ func (s *MCPService) Chat(context string) (string, error) {
 
 func NewMCPService(name string, host string, key string) *MCPService {
 	s := &MCPService{}
-	s.Name = name
-	s.Host = host
-	s.Key = key
-	s.Client = http.Client{}
-	s.Client.Timeout = 60 * time.Second
-	s.Client.Transport = &http.Transport{
-		MaxIdleConns:          10,
-		IdleConnTimeout:       60 * time.Second,
-		DisableCompression:    true,
-		ForceAttemptHTTP2:     true,
-		ExpectContinueTimeout: 10 * time.Second,
-	}
+	s.name = name
+	s.host = host
+	s.key = key
+	s.clients = []MCPClient{}
 	return s
 }
 
-func (s *MCPService) AddTool(name string, description string, parameters Paramaters, handler func(args map[string]any) (string, error)) {
+func (s *MCPClient) AddTool(name string, description string, parameters Paramaters, handler func(args map[string]any) (string, error)) {
 	tool := Tool{
 		Type: "function",
 		Function: struct {
@@ -68,6 +61,26 @@ func (s *MCPService) AddTool(name string, description string, parameters Paramat
 		},
 		Handler: handler,
 	}
-	s.Tools = append(s.Tools, tool)
+	s.tools = append(s.tools, tool)
 	fmt.Println("Tool", tool)
+}
+
+func (s *MCPService) NewDialogue() *MCPClient {
+	c := MCPClient{}
+	c.client = http.Client{}
+	c.client.Timeout = 60 * time.Second
+	c.client.Transport = &http.Transport{
+		MaxIdleConns:          10,
+		IdleConnTimeout:       60 * time.Second,
+		DisableCompression:    true,
+		ForceAttemptHTTP2:     true,
+		ExpectContinueTimeout: 10 * time.Second,
+	}
+	c.context = []req_mess{}
+	c.tools = []Tool{}
+	c.host = &s.host
+	c.key = &s.key
+	c.name = &s.name
+	s.clients = append(s.clients, c)
+	return &c
 }
