@@ -8,32 +8,47 @@ import (
 
 func (s *MCPClient) Chat(context string) (string, error) {
 	// 提取信息
-	requestBodyJSON, err := s.extract_keyword(context)
+	extractKeywordBodyJSON, err := s.create_extract_keyword_request(context)
 	if err != nil {
 		fmt.Println("转换请求体为JSON错误:", err)
 		return "", err
 	}
-	// 发送 POST 请求 读取响应体
 	s.context = append(s.context, req_mess{Role: "user", Content: context})
-	respBody, err := s.sendcontextToModel(&requestBodyJSON)
+	// 发送 POST 请求
+	keywordBody, err := s.send_request(extractKeywordBodyJSON)
 	if err != nil {
 		fmt.Println("读取响应体错误:", err)
 		return "", err
 	}
-	fmt.Println("响应内容:", string(*respBody))
-	// 获取结果
-	answer, err := s.get_tool_select(respBody)
+	fmt.Println("响应内容:", string(*keywordBody))
+	// 解析结果并调用工具
+	answer, err := s.get_tool(keywordBody)
 	s.context = append(s.context, req_mess{Role: "user", Content: answer})
 	if err != nil {
+		if err.Error() == "error: no tool calls found in response" {
+			fmt.Println("没有工具调用，直接返回响应内容")
+			return answer, nil
+		}
 		fmt.Println("解析响应结果错误:", err)
 		return "", err
 	}
-	result, err := s.extract_result(answer)
-	// 打印结果
-	fmt.Println("结果:", result)
+	// 提取最终答案
+	extractResultBodyJSON, err := s.create_extract_result_request(answer)
+	if err != nil {
+		fmt.Println("转换请求体为JSON错误:", err)
+		return "", err
+	}
+	// 发送 POST 请求
+	resultBody, err := s.send_request(extractResultBodyJSON)
+	fmt.Println("结果:", string(*resultBody))
 	if err != nil {
 		fmt.Println("解析结果错误:", err)
 		return "", err
+	}
+	// 解析结果
+	result, err := s.get_result(resultBody)
+	if err != nil {
+		fmt.Println("解析结果错误:", err)
 	}
 	return result, nil
 }
@@ -65,7 +80,7 @@ func (s *MCPClient) AddTool(name string, description string, parameters Paramate
 	fmt.Println("Tool", tool)
 }
 
-func (s *MCPService) NewDialogue() *MCPClient {
+func (s *MCPService) NewClient() *MCPClient {
 	c := MCPClient{}
 	c.client = http.Client{}
 	c.client.Timeout = 60 * time.Second
@@ -77,6 +92,7 @@ func (s *MCPService) NewDialogue() *MCPClient {
 		ExpectContinueTimeout: 10 * time.Second,
 	}
 	c.context = []req_mess{}
+	c.context = append(c.context, req_mess{Role: "system", Content: system_prompt})
 	c.tools = []Tool{}
 	c.host = &s.host
 	c.key = &s.key

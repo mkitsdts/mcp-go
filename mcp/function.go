@@ -9,15 +9,11 @@ import (
 )
 
 // 提取回答关键信息
-func (s *MCPClient) extract_keyword(context string) ([]byte, error) {
-	messages := []map[string]string{
-		{"role": "system", "content": system_extract_paramater_prompt},
-		{"role": "user", "content": context},
-	}
-	fmt.Println("Request data:", messages)
+func (s *MCPClient) create_extract_keyword_request(context string) (*[]byte, error) {
+	s.context = append(s.context, req_mess{Role: "user", Content: context})
 
 	// 转换为JSON
-	messagesJSON, err := json.Marshal(messages)
+	messagesJSON, err := json.Marshal(s.context)
 	if err != nil {
 		return nil, err
 	}
@@ -37,11 +33,11 @@ func (s *MCPClient) extract_keyword(context string) ([]byte, error) {
 		return nil, err
 	}
 	fmt.Println("Request body:", string(requestBodyJSON))
-	return requestBodyJSON, nil
+	return &requestBodyJSON, nil
 }
 
-func (s *MCPClient) get_tool_select(respBody *[]byte) (string, error) {
-	// 解析 JSON 响应
+// 解析大模型响应信息并工具调用
+func (s *MCPClient) get_tool(respBody *[]byte) (string, error) {
 	resp := response{}
 	if err := json.Unmarshal(*respBody, &resp); err != nil {
 		fmt.Println("解析 JSON 响应错误:", err)
@@ -86,14 +82,14 @@ func (s *MCPClient) get_tool_select(respBody *[]byte) (string, error) {
 }
 
 // 把工具调用结果发送给大模型
-func (s *MCPClient) extract_result(result string) (string, error) {
+func (s *MCPClient) create_extract_result_request(result string) (*[]byte, error) {
 	fmt.Println("工具最初返回结果:", result)
 	s.context = append(s.context, req_mess{Role: "user", Content: "工具结果： " + system_extarct_answer_prompt})
 	fmt.Println("Request data:", s.context)
 	// 转换为JSON
 	messagesJSON, err := json.Marshal(s.context)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// 创建完整请求体
 	requestBody := request{
@@ -107,15 +103,12 @@ func (s *MCPClient) extract_result(result string) (string, error) {
 	fmt.Println("Request body:", string(requestBodyJSON))
 	if err != nil {
 		fmt.Println("转换请求体为JSON错误:", err)
-		return "", err
+		return nil, err
 	}
-	// 读取响应体
-	respBody, err := s.sendcontextToModel(&requestBodyJSON)
-	if err != nil {
-		fmt.Println("读取响应体错误:", err)
-		return "", err
-	}
-	fmt.Println("响应内容:", string(*respBody))
+	return &requestBodyJSON, nil
+}
+
+func (s *MCPClient) get_result(respBody *[]byte) (string, error) {
 	// 解析 JSON 响应
 	resp := response{}
 	if err := json.Unmarshal(*respBody, &resp); err != nil {
@@ -126,7 +119,7 @@ func (s *MCPClient) extract_result(result string) (string, error) {
 }
 
 // 向大模型发送请求
-func (s *MCPClient) sendcontextToModel(data *[]byte) (*[]byte, error) {
+func (s *MCPClient) send_request(data *[]byte) (*[]byte, error) {
 	// 发送 POST 请求
 	req, err := http.NewRequest("POST", (*s.host), bytes.NewBuffer(*data))
 	if err != nil {

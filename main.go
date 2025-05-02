@@ -35,7 +35,7 @@ func getWeather(args map[string]any) (string, error) {
 func main() {
 	// 初始化服务
 	s := mcp.NewMCPService("deepseek-chat", "https://api.deepseek.com/chat/completions", mcp.API_KEY)
-	dialog := s.NewDialogue()
+	dialog := s.NewClient()
 	// 添加天气查询工具
 	dialog.AddTool(
 		"weather_query",
@@ -58,12 +58,26 @@ func main() {
 	)
 
 	// 测试1：直接查询天气
-	fmt.Println("\n--- 测试1：查询北京天气 ---")
-	resp1, err := dialog.Chat("北京今天的天气怎么样？")
+	fmt.Println("\n--- 测试1：查询妹妹天气 ---")
+	resp1, err := dialog.Chat("我要查询我妹妹的位置")
 	if err != nil {
 		log.Fatalf("查询失败: %v", err)
 	}
 	fmt.Printf("模型回复: %s\n", resp1)
+
+	fmt.Println("\n--- 测试2：查询弟弟天气 ---")
+	resp2, err := dialog.Chat("我要查询我弟弟的位置")
+	if err != nil {
+		log.Fatalf("查询失败: %v", err)
+	}
+	fmt.Printf("模型回复: %s\n", resp2)
+
+	fmt.Println("\n--- 测试3：查询北京天气 ---")
+	resp3, err := dialog.Chat("我要查询北京的天气")
+	if err != nil {
+		log.Fatalf("查询失败: %v", err)
+	}
+	fmt.Printf("模型回复: %s\n", resp3)
 
 	fmt.Println("\n所有测试完成")
 }
