@@ -22,9 +22,9 @@ service := mcp.NewMCPService("gemma-3-12b-it", "http://localhost:1234/v1/chat/co
 
 ### 二、开启新对话
 
-通过调用 service 的 NewDialogue 接口开启一个新对话，代码如下：
+通过调用 service 的 NewClient 接口开启一个新对话，代码如下：
 
-dialog := s.NewDialogue()
+dialog := s.NewClient()
 
 新对话可以保存上下文，但保存效果拉跨，急需加强
 
