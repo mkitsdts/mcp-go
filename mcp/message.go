@@ -1,15 +1,15 @@
 package mcp
 
-type resp_mess struct {
+type resp_message struct {
 	Role       string      `json:"role"`
 	Tool_calls []tool_call `json:"tool_calls"`
 	Content    string      `json:"content"`
 }
 
 type choice struct {
-	Index    int       `json:"index"`
-	Logprobs string    `json:"logprobs"`
-	Message  resp_mess `json:"message"`
+	Index    int          `json:"index"`
+	Logprobs string       `json:"logprobs"`
+	Message  resp_message `json:"message"`
 }
 
 type response struct {

@@ -36,7 +36,7 @@ func (s *MCPClient) create_extract_keyword_request(context string) (*[]byte, err
 	return &requestBodyJSON, nil
 }
 
-// 解析大模型响应信息并工具调用
+// 解析大模型响应信息并调用工具
 func (s *MCPClient) get_tool(respBody *[]byte) (string, error) {
 	resp := response{}
 	if err := json.Unmarshal(*respBody, &resp); err != nil {
@@ -55,9 +55,6 @@ func (s *MCPClient) get_tool(respBody *[]byte) (string, error) {
 	if len(resp.Choices[0].Message.Tool_calls) == 0 {
 		return "", fmt.Errorf("error: no tool calls found in response")
 	}
-	fmt.Println("工具调用:", resp.Choices[0].Message.Tool_calls)
-	fmt.Println("工具名称:", resp.Choices[0].Message.Tool_calls[0].Function.Name)
-	fmt.Println("工具参数:", resp.Choices[0].Message.Tool_calls[0].Function.Arguments)
 	// 解析参数
 	var args map[string]any
 	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Tool_calls[0].Function.Arguments), &args); err != nil {
@@ -70,7 +67,6 @@ func (s *MCPClient) get_tool(respBody *[]byte) (string, error) {
 			// 调用工具
 			result, err := s.tools[i].Handler(args)
 			if err != nil {
-				fmt.Println("调用工具错误:", err)
 				return "", err
 			}
 			// 返回结果给大模型
@@ -83,9 +79,7 @@ func (s *MCPClient) get_tool(respBody *[]byte) (string, error) {
 
 // 把工具调用结果发送给大模型
 func (s *MCPClient) create_extract_result_request(result string) (*[]byte, error) {
-	fmt.Println("工具最初返回结果:", result)
-	s.context = append(s.context, req_mess{Role: "user", Content: "工具结果： " + system_extarct_answer_prompt})
-	fmt.Println("Request data:", s.context)
+	s.context = append(s.context, req_mess{Role: "user", Content: "工具结果： " + result})
 	// 转换为JSON
 	messagesJSON, err := json.Marshal(s.context)
 	if err != nil {
@@ -117,6 +111,8 @@ func (s *MCPClient) get_result(respBody *[]byte) (string, error) {
 	}
 	return resp.Choices[0].Message.Content, nil
 }
+
+const request_content_type string = "application/json"
 
 // 向大模型发送请求
 func (s *MCPClient) send_request(data *[]byte) (*[]byte, error) {
