@@ -9,9 +9,8 @@ import (
 )
 
 // 提取回答关键信息
-func (s *MCPClient) create_extract_keyword_request(context string) (*[]byte, error) {
-	s.context = append(s.context, req_mess{Role: "user", Content: context})
-
+func (s *MCPClient) create_request(context string, role string) (*[]byte, error) {
+	s.context = append(s.context, req_mess{Role: role, Content: context})
 	// 转换为JSON
 	messagesJSON, err := json.Marshal(s.context)
 	if err != nil {
@@ -27,7 +26,7 @@ func (s *MCPClient) create_extract_keyword_request(context string) (*[]byte, err
 	requestBody := request{
 		Model:       *s.name,
 		Messages:    json.RawMessage(messagesJSON),
-		Temperature: 0.1,
+		Temperature: 0.0,
 		Stream:      false,
 		Tools:       tools,
 	}
@@ -42,7 +41,7 @@ func (s *MCPClient) create_extract_keyword_request(context string) (*[]byte, err
 }
 
 // 解析大模型响应信息并调用工具
-func (s *MCPClient) get_tool(respBody *[]byte) (string, error) {
+func (s *MCPClient) parseresp(respBody *[]byte) (string, error) {
 	resp := response{}
 	if err := json.Unmarshal(*respBody, &resp); err != nil {
 		fmt.Println("解析 JSON 响应错误:", err)
@@ -56,65 +55,53 @@ func (s *MCPClient) get_tool(respBody *[]byte) (string, error) {
 	if resp.Error != "" {
 		return "", fmt.Errorf("error: %s", resp.Error)
 	}
+	if resp.Choices[0].FinishReason == "stop" {
+		return resp.Choices[0].Message.Content, nil
+	}
+
 	// 检查是否有工具调用
 	if len(resp.Choices[0].Message.Tool_calls) == 0 {
 		return "", fmt.Errorf("error: no tool calls found in response")
 	}
+
 	// 解析参数
 	var args map[string]any
 	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Tool_calls[0].Function.Arguments), &args); err != nil {
 		fmt.Println("转换函数参数为JSON错误:", err)
 		return "", err
 	}
-	// 调用工具
+	content, err := s.use_tool(resp.Choices[0].Message.Tool_calls[0].Function.Name, args)
+	if err != nil {
+		fmt.Println("调用工具错误:", err)
+		return "", err
+	}
+	reqBody, err := s.create_request("工具调用结果： "+content, "user")
+	if err != nil {
+		fmt.Println("转换请求体为JSON错误:", err)
+		return "", err
+	}
+	newRespBody, err := s.send_request(reqBody)
+	if err != nil {
+		fmt.Println("读取响应体错误:", err)
+		return "", err
+	}
+	return s.parseresp(newRespBody)
+}
+
+func (s *MCPClient) use_tool(name string, args map[string]any) (string, error) {
 	for i := range s.tools {
-		if s.tools[i].Function.Name == resp.Choices[0].Message.Tool_calls[0].Function.Name {
+		if s.tools[i].Function.Name == name {
 			// 调用工具
 			result, err := s.tools[i].Handler(args)
 			if err != nil {
 				return "", err
 			}
+			s.context = append(s.context, req_mess{Role: "user", Content: result})
 			// 返回结果给大模型
 			return fmt.Sprintf("%v", result), nil
 		}
 	}
-
-	return "", nil
-}
-
-// 把工具调用结果发送给大模型
-func (s *MCPClient) create_extract_result_request(result string) (*[]byte, error) {
-	s.context = append(s.context, req_mess{Role: "user", Content: "工具结果： " + result})
-	// 转换为JSON
-	messagesJSON, err := json.Marshal(s.context)
-	if err != nil {
-		return nil, err
-	}
-	// 创建完整请求体
-	requestBody := request{
-		Model:       *s.name,
-		Messages:    json.RawMessage(messagesJSON),
-		Temperature: 0.1,
-		Stream:      false,
-	}
-	// 转换为JSON
-	requestBodyJSON, err := json.Marshal(requestBody)
-	fmt.Println("Request body:", string(requestBodyJSON))
-	if err != nil {
-		fmt.Println("转换请求体为JSON错误:", err)
-		return nil, err
-	}
-	return &requestBodyJSON, nil
-}
-
-func (s *MCPClient) get_result(respBody *[]byte) (string, error) {
-	// 解析 JSON 响应
-	resp := response{}
-	if err := json.Unmarshal(*respBody, &resp); err != nil {
-		fmt.Println("解析 JSON 响应错误:", err)
-		return "", err
-	}
-	return resp.Choices[0].Message.Content, nil
+	return "", fmt.Errorf("error: no tool found with name %s", name)
 }
 
 const request_content_type string = "application/json"

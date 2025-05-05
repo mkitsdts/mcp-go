@@ -8,12 +8,11 @@ import (
 
 func (s *MCPClient) Chat(context string) (string, error) {
 	// 提取信息
-	extractKeywordBodyJSON, err := s.create_extract_keyword_request(context)
+	extractKeywordBodyJSON, err := s.create_request(context, "user")
 	if err != nil {
 		fmt.Println("转换请求体为JSON错误:", err)
 		return "", err
 	}
-	s.context = append(s.context, req_mess{Role: "user", Content: context})
 	// 发送 POST 请求
 	keywordBody, err := s.send_request(extractKeywordBodyJSON)
 	if err != nil {
@@ -22,33 +21,14 @@ func (s *MCPClient) Chat(context string) (string, error) {
 	}
 	fmt.Println("响应内容:", string(*keywordBody))
 	// 解析结果并调用工具
-	answer, err := s.get_tool(keywordBody)
-	s.context = append(s.context, req_mess{Role: "user", Content: answer})
+	result, err := s.parseresp(keywordBody)
 	if err != nil {
 		if err.Error() == "error: no tool calls found in response" {
 			fmt.Println("没有工具调用，直接返回响应内容")
-			return answer, nil
+			return result, nil
 		}
 		fmt.Println("解析响应结果错误:", err)
 		return "", err
-	}
-	// 提取最终答案
-	extractResultBodyJSON, err := s.create_extract_result_request(answer)
-	if err != nil {
-		fmt.Println("转换请求体为JSON错误:", err)
-		return "", err
-	}
-	// 发送 POST 请求
-	resultBody, err := s.send_request(extractResultBodyJSON)
-	fmt.Println("结果:", string(*resultBody))
-	if err != nil {
-		fmt.Println("解析结果错误:", err)
-		return "", err
-	}
-	// 解析结果
-	result, err := s.get_result(resultBody)
-	if err != nil {
-		fmt.Println("解析结果错误:", err)
 	}
 	return result, nil
 }

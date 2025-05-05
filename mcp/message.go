@@ -7,9 +7,10 @@ type resp_message struct {
 }
 
 type choice struct {
-	Index    int          `json:"index"`
-	Logprobs string       `json:"logprobs"`
-	Message  resp_message `json:"message"`
+	Index        int          `json:"index"`
+	Logprobs     string       `json:"logprobs"`
+	FinishReason string       `json:"finish_reason"`
+	Message      resp_message `json:"message"`
 }
 
 type response struct {

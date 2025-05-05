@@ -34,7 +34,7 @@ func getWeather(args map[string]any) (string, error) {
 
 func main() {
 	// 初始化服务
-	s := mcp.NewMCPService("deepseek-chat", "https://api.deepseek.com/chat/completions", mcp.API_KEY)
+	s := mcp.NewMCPService("qwen3-14b", "http://localhost:1234/v1/chat/completions", "")
 	dialog := s.NewClient("查询天气")
 	// 添加天气查询工具
 	dialog.AddTool(
@@ -56,28 +56,38 @@ func main() {
 		},
 		getWeather,
 	)
+	// 添加华氏度转换工具
+	dialog.AddTool(
+		"celsius_to_fahrenheit",
+		"将摄氏度转换为华氏度",
+		mcp.Paramaters{
+			Type: "object",
+			Properties: map[string]any{
+				"celsius": map[string]any{
+					"type":        "number",
+					"description": "摄氏度",
+				},
+			},
+			Required: []string{"celsius"},
+		},
+		func(args map[string]any) (string, error) {
+			celsius, ok := args["celsius"].(float64)
+			if !ok {
+				return "", fmt.Errorf("缺少有效的摄氏度参数")
+			}
+			fahrenheit := celsius*9/5 + 32
+			fmt.Printf("摄氏度: %.2f, 华氏度: %.2f\n", celsius, fahrenheit)
+			return fmt.Sprintf("华氏度: %.2f", fahrenheit), nil
+		},
+	)
 
 	// 测试1：直接查询天气
-	fmt.Println("\n--- 测试1：查询妹妹天气 ---")
-	resp1, err := dialog.Chat("我要查询我妹妹的位置")
+	fmt.Println("\n--- 测试1：查询北京天气 ---")
+	resp1, err := dialog.Chat("我要查询北京的天气，然后把摄氏度转换成华氏度")
 	if err != nil {
 		log.Fatalf("查询失败: %v", err)
 	}
 	fmt.Printf("模型回复: %s\n", resp1)
-
-	fmt.Println("\n--- 测试2：查询弟弟天气 ---")
-	resp2, err := dialog.Chat("我要查询我弟弟的位置")
-	if err != nil {
-		log.Fatalf("查询失败: %v", err)
-	}
-	fmt.Printf("模型回复: %s\n", resp2)
-
-	fmt.Println("\n--- 测试3：查询北京天气 ---")
-	resp3, err := dialog.Chat("我要查询北京的天气")
-	if err != nil {
-		log.Fatalf("查询失败: %v", err)
-	}
-	fmt.Printf("模型回复: %s\n", resp3)
 
 	fmt.Println("\n所有测试完成")
 }
