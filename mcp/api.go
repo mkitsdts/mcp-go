@@ -58,8 +58,25 @@ func NewMCPService(name string, host string, key string) *MCPService {
 	s.name = name
 	s.host = host
 	s.key = key
-	s.clients = []MCPClient{}
+	s.Clients = map[string]MCPClient{}
 	return s
+}
+
+func (s *MCPService) AddGlobalTool(name string, description string, parameters Paramaters, handler func(args map[string]any) (string, error)) {
+	tool := Tool{
+		Type: "function",
+		Function: struct {
+			Name        string     `json:"name"`
+			Description string     `json:"description"`
+			Para        Paramaters `json:"parameters"`
+		}{
+			Name:        name,
+			Description: description,
+			Para:        parameters,
+		},
+		Handler: handler,
+	}
+	s.tools = append(s.tools, tool)
 }
 
 func (s *MCPClient) AddTool(name string, description string, parameters Paramaters, handler func(args map[string]any) (string, error)) {
@@ -80,7 +97,7 @@ func (s *MCPClient) AddTool(name string, description string, parameters Paramate
 	fmt.Println("Tool", tool)
 }
 
-func (s *MCPService) NewClient() *MCPClient {
+func (s *MCPService) NewClient(tag string) *MCPClient {
 	c := MCPClient{}
 	c.client = http.Client{}
 	c.client.Timeout = 60 * time.Second
@@ -97,6 +114,7 @@ func (s *MCPService) NewClient() *MCPClient {
 	c.host = &s.host
 	c.key = &s.key
 	c.name = &s.name
-	s.clients = append(s.clients, c)
+	c.golbaltool = &s.tools
+	s.Clients[tag] = c
 	return &c
 }

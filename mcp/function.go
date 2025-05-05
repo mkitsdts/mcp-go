@@ -17,14 +17,19 @@ func (s *MCPClient) create_extract_keyword_request(context string) (*[]byte, err
 	if err != nil {
 		return nil, err
 	}
-
+	sum := len(*s.golbaltool) + len(s.tools)
+	tools := make([]Tool, sum)
+	// 将全局工具添加到请求体
+	copy(tools, *s.golbaltool)
+	// 将当前对话的工具添加到请求体
+	copy(tools[len(*s.golbaltool):], s.tools)
 	// 创建完整请求体
 	requestBody := request{
 		Model:       *s.name,
 		Messages:    json.RawMessage(messagesJSON),
 		Temperature: 0.1,
 		Stream:      false,
-		Tools:       s.tools,
+		Tools:       tools,
 	}
 	// 转换为JSON
 	requestBodyJSON, err := json.Marshal(requestBody)

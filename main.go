@@ -35,7 +35,7 @@ func getWeather(args map[string]any) (string, error) {
 func main() {
 	// 初始化服务
 	s := mcp.NewMCPService("deepseek-chat", "https://api.deepseek.com/chat/completions", mcp.API_KEY)
-	dialog := s.NewClient()
+	dialog := s.NewClient("查询天气")
 	// 添加天气查询工具
 	dialog.AddTool(
 		"weather_query",
