@@ -60,6 +60,22 @@ func (s *MCPService) AddGlobalTool(name string, description string, parameters P
 }
 
 func (s *MCPClient) AddTool(name string, description string, parameters Paramaters, handler func(args map[string]any) (string, error)) {
+	if len(s.tools)+len(*s.golbaltool) > 10 {
+		fmt.Println("工具数量超过限制，无法添加新工具")
+		return
+	}
+	for i := range *s.golbaltool {
+		if (*s.golbaltool)[i].Function.Name == name {
+			fmt.Println("工具名称已存在，无法添加新工具")
+			return
+		}
+	}
+	for i := range s.tools {
+		if s.tools[i].Function.Name == name {
+			fmt.Println("工具名称已存在，无法添加新工具")
+			return
+		}
+	}
 	tool := Tool{
 		Type: "function",
 		Function: struct {
