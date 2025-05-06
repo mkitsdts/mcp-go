@@ -70,6 +70,7 @@ func (s *MCPClient) parseresp(respBody *[]byte) (string, error) {
 		fmt.Println("转换函数参数为JSON错误:", err)
 		return "", err
 	}
+	s.context = append(s.context, req_mess{Role: "assistant", Content: resp.Choices[0].Message.Content})
 	content, err := s.use_tool(resp.Choices[0].Message.Tool_calls[0].Function.Name, args)
 	if err != nil {
 		fmt.Println("调用工具错误:", err)
@@ -96,7 +97,6 @@ func (s *MCPClient) use_tool(name string, args map[string]any) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			s.context = append(s.context, req_mess{Role: "user", Content: result})
 			// 返回结果给大模型
 			return fmt.Sprintf("%v", result), nil
 		}
@@ -108,7 +108,6 @@ func (s *MCPClient) use_tool(name string, args map[string]any) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			s.context = append(s.context, req_mess{Role: "user", Content: result})
 			// 返回结果给大模型
 			return fmt.Sprintf("%v", result), nil
 		}

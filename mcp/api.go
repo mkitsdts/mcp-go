@@ -93,6 +93,10 @@ func (s *MCPClient) AddTool(name string, description string, parameters Paramate
 	fmt.Println("Tool", tool)
 }
 
+func (s *MCPClient) ClearHistory() {
+	s.context = s.context[:0]
+}
+
 func (s *MCPService) NewClient(tag string) *MCPClient {
 	c := MCPClient{}
 	c.client = http.Client{}

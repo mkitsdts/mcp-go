@@ -89,5 +89,15 @@ func main() {
 	}
 	fmt.Printf("模型回复: %s\n", resp1)
 
+	dialog.ClearHistory()
+
+	// 测试2:无需工具调用
+	fmt.Println("\n--- 测试2：问候 ---")
+	resp2, err := dialog.Chat("你好")
+	if err != nil {
+		log.Fatalf("操作失败: %v", err)
+	}
+	fmt.Printf("模型回复: %s\n", resp2)
+
 	fmt.Println("\n所有测试完成")
 }
