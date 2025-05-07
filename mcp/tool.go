@@ -9,7 +9,6 @@ import (
 func (s *MCPClient) parseresp(respBody *[]byte) (string, error) {
 	resp := response{}
 	if err := json.Unmarshal(*respBody, &resp); err != nil {
-		fmt.Println("解析 JSON 响应错误:", err)
 		return "", err
 	}
 	// 检查是否有响应内容
@@ -32,23 +31,19 @@ func (s *MCPClient) parseresp(respBody *[]byte) (string, error) {
 	// 解析参数
 	var args map[string]any
 	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Tool_calls[0].Function.Arguments), &args); err != nil {
-		fmt.Println("转换函数参数为JSON错误:", err)
 		return "", err
 	}
 	s.context = append(s.context, req_mess{Role: "assistant", Content: resp.Choices[0].Message.Content})
 	content, err := s.use_tool(resp.Choices[0].Message.Tool_calls[0].Function.Name, args)
 	if err != nil {
-		fmt.Println("调用工具错误:", err)
 		return "", err
 	}
-	reqBody, err := s.create_request("工具调用结果： "+content, "user")
+	reqBody, err := s.create_request(tool_response_prompt+content, "user")
 	if err != nil {
-		fmt.Println("转换请求体为JSON错误:", err)
 		return "", err
 	}
 	newRespBody, err := s.send_request(reqBody)
 	if err != nil {
-		fmt.Println("读取响应体错误:", err)
 		return "", err
 	}
 	return s.parseresp(newRespBody)
