@@ -4,8 +4,6 @@
 
 一个 Service 就是与一个模型，注册一个 Service 就会注册一个模型，对话时需要在 Service 上 注册一个交流的 Client ，目前 client 能保存上下文不受限制，需要特别注意内存
 
-添加工具有两种方式，分别是 Service 端提供的 AddGlobalTool() 以及 Service 下属的 Client 提供的 AddTool() 函数。通过函数名很容易判断 AddGlobalTool 注册的是全局工具，也就是所有请求都会带上的工具。 AddTool 注册的工具只会附带在当前 Client 的请求中
-
 ## 具体使用方法：
 
 ### 一、注册 service
@@ -38,15 +36,51 @@ tag 是 Client 的标签，后续通过标签直接找到对应的 Client ，防
 
 通过 Client 提供的 ClearHistory 接口清空对话，但仍然保留工具
 
-## 新增更新：
+### 五、工具注册
 
-1、实现分步工具调用，增强通用性
+工具分为全局工具和局部工具，全局工具会附带在该 Service 的全部请求中，局部工具仅局限于当前 Client
+
+全局工具通过 Service 提供的 AddGolbalTool 接口添加，局部工具通过 Client 提供的 AddTool 接口添加
+
+具体操作如下 
+
+```
+dialog.AddTool("weather_query","查询指定位置的天气情况",
+		mcp.Paramaters{
+			Type: "object",
+			Properties: map[string]any{
+				"latitude": map[string]any{
+					"type":        "number",
+					"description": "latitude",
+				},
+				"longitude": map[string]any{
+					"type":        "number",
+					"description": "longitude",
+				},
+			},
+			Required: []string{"latitude", "longitude"},
+		},
+		getWeather,
+	)
+```
+
+AddGlobalTool 和 AddTool 操作是一样的，除了添加的位置不同之外其他都一样
+
+第一个参数是工具名称，第二个参数是工具描述，第三个参数是描述工具的json信息，Type字段的值统一的 object ， Properties 的类型是 map[string]any ，用来填写工具参数， Properties 下面的 key 是参数名称，value 是描述参数的信息，比如是字符串就在 type 里填写string， description是对工具参数的描述，接下来的 required 字样存储的是 []string 的值，这里填写的是必须要的参数。第四个参数就是工具函数的 Handler ，参数类型统一为 map[string]any ，取参数的时候通过参数名称作为键读取参数值，注意错误检查，返回类型统一为 （string,err）也就是必须要把处理结果转换成字符串，并且抛出错误
+
+### 五、文件注册
+
+与工具注册的设计类似，分为全局文件添加和局部文件添加。参数非常简单，只有一个参数 path ， path 的值就是相对 main.go 文件的路径
+
+## 新增内容：
+
+1、实现文件的添加
 
 2、优化提示词
 
 3、加入工具数量限制，不能超过10个，超过部分无法再添加
 
-## 之前实现：
+## 已经实现：
 
 1、实现与大模型的对话（目前仅支持非流式调用，后期加入参数实现流式与非流式可控转换）
 
@@ -63,6 +97,12 @@ tag 是 Client 的标签，后续通过标签直接找到对应的 Client ，防
 7、优化项目结构，实现在 Service 端全局添加工具，无需为 Client 重复添加工具
 
 8、为 Client 分配名称，减轻通过下表手动管理 Client 的烦恼
+
+9、实现分步工具调用，增强通用性
+
+10、优化提示词
+
+11、加入工具数量限制，不能超过10个，超过部分无法再添加
 
 ## 计划实现：
 

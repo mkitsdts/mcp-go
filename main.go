@@ -32,10 +32,12 @@ func getWeather(args map[string]any) (string, error) {
 	return fmt.Sprintf("当前天气: %s", weather), nil
 }
 
-func main() {
-	// 初始化服务
+func Test_Tool() {
 	s := mcp.NewMCPService("qwen3-14b", "http://localhost:1234/v1/chat/completions", "")
 	dialog := s.NewClient("查询天气")
+	if err := dialog.AddFile("README.md"); err != nil {
+		panic(err)
+	}
 	// 添加天气查询工具
 	dialog.AddTool(
 		"weather_query",
@@ -98,6 +100,26 @@ func main() {
 		log.Fatalf("操作失败: %v", err)
 	}
 	fmt.Printf("模型回复: %s\n", resp2)
+}
 
-	fmt.Println("\n所有测试完成")
+func Test_File() {
+	// 初始化服务
+	s := mcp.NewMCPService("qwen3-14b", "http://localhost:1234/v1/chat/completions", "")
+	dialog := s.NewClient("文件测试")
+	if err := dialog.AddFile("./README.md"); err != nil {
+		panic(err)
+	}
+	// 测试1:添加文件
+	fmt.Println("\n--- 测试1：添加文件 ---")
+	resp1, err := dialog.Chat("请帮我做个摘要")
+	if err != nil {
+		log.Fatalf("操作失败: %v", err)
+	}
+	fmt.Printf("模型回复: %s\n", resp1)
+}
+
+func main() {
+
+	// Test_Tool()
+	Test_File()
 }
