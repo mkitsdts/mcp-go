@@ -38,8 +38,9 @@ func (s *MCPClient) send_request(data *[]byte) (*[]byte, error) {
 
 // 提取回答关键信息
 func (s *MCPClient) create_request(context string, role string) (*[]byte, error) {
-	s.context = append(s.context, req_mess{Role: role, Content: context})
-
+	if context != "" {
+		s.context = append(s.context, req_mess{Role: role, Content: context})
+	}
 	contexts := make([]req_mess, len(s.context))
 	copy(contexts, s.context)
 	for key, value := range s.files {

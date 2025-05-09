@@ -33,11 +33,8 @@ func getWeather(args map[string]any) (string, error) {
 }
 
 func Test_Tool() {
-	s := mcp.NewMCPService("qwen3-14b", "http://localhost:1234/v1/chat/completions", "")
+	s := mcp.NewMCPService(mcp.API_NAME, mcp.API_HOST, "")
 	dialog := s.NewClient("查询天气")
-	if err := dialog.AddFile("README.md"); err != nil {
-		panic(err)
-	}
 	// 添加天气查询工具
 	dialog.AddTool(
 		"weather_query",
@@ -87,6 +84,7 @@ func Test_Tool() {
 	fmt.Println("\n--- 测试1：查询北京天气 ---")
 	resp1, err := dialog.Chat("我要查询北京的天气，然后把摄氏度转换成华氏度")
 	if err != nil {
+		fmt.Println("resp1:", resp1)
 		log.Fatalf("查询失败: %v", err)
 	}
 	fmt.Printf("模型回复: %s\n", resp1)
@@ -120,6 +118,6 @@ func Test_File() {
 
 func main() {
 
-	// Test_Tool()
-	Test_File()
+	Test_Tool()
+	// Test_File()
 }

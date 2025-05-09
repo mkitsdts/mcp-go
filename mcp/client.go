@@ -125,6 +125,16 @@ func (s *MCPClient) EraseTool(name string) {
 	}
 }
 
+const MAX_CONTEXT_LENGTH = 4096
+
+func (s *MCPClient) AddSystemPrompt(context string) error {
+	if len(s.context) > MAX_CONTEXT_LENGTH {
+		return fmt.Errorf("exceeded maximum context length (%d)", MAX_CONTEXT_LENGTH)
+	}
+	s.context = append(s.context, req_mess{Role: "system", Content: context})
+	return nil
+}
+
 func (s *MCPClient) ClearTool() {
 	s.tools = s.tools[:0]
 }
