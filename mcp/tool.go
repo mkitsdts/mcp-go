@@ -70,17 +70,7 @@ func (s *MCPClient) parseresp(respBody *[]byte) (string, error) {
 }
 
 func (s *MCPClient) use_tool(name string, args map[string]any) (string, error) {
-	for i := range *s.golbaltool {
-		if (*s.golbaltool)[i].Function.Name == name {
-			// 调用工具
-			result, err := (*s.golbaltool)[i].Handler(args)
-			if err != nil {
-				return "", err
-			}
-			// 返回结果给大模型
-			return fmt.Sprintf("%v", result), nil
-		}
-	}
+	// 检查工具名称是否存在
 	for i := range s.tools {
 		if s.tools[i].Function.Name == name {
 			// 调用工具

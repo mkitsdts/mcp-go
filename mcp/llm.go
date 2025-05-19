@@ -13,16 +13,16 @@ const request_content_type string = "application/json"
 // 向大模型发送请求
 func (s *MCPClient) send_request(data *[]byte) (*[]byte, error) {
 	// 发送 POST 请求
-	req, err := http.NewRequest("POST", (*s.host), bytes.NewBuffer(*data))
+	req, err := http.NewRequest("POST", s.host, bytes.NewBuffer(*data))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", request_content_type)
-	if (*s.key) != "" {
-		req.Header.Set("Authorization", "Bearer "+(*s.key))
+	if s.key != "" {
+		req.Header.Set("Authorization", "Bearer "+s.key)
 	}
 	fmt.Println("请求头:", req.Header)
-	resp, err := s.client.Do(req)
+	resp, err := s.GetHTTPClient().Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -48,26 +48,19 @@ func (s *MCPClient) create_request(context string, role string) (*[]byte, error)
 		fmt.Println("文件内容:", value)
 		contexts = append(contexts, req_mess{Role: "user", Content: "file<" + key + ">: " + value})
 	}
-	for key, value := range *s.golbalfile {
-		fmt.Println("全局文件名:", key)
-		fmt.Println("全局文件内容:", value)
-		contexts = append(contexts, req_mess{Role: "user", Content: "file<" + key + ">: " + value})
-	}
 
 	// 转换为JSON
 	messagesJSON, err := json.Marshal(contexts)
 	if err != nil {
 		return nil, err
 	}
-	sum := len(*s.golbaltool) + len(s.tools)
+	sum := len(s.tools)
 	tools := make([]Tool, sum)
-	// 将全局工具添加到请求体
-	copy(tools, *s.golbaltool)
 	// 将当前对话的工具添加到请求体
-	copy(tools[len(*s.golbaltool):], s.tools)
+	copy(tools, s.tools)
 	// 创建完整请求体
 	requestBody := request{
-		Model:       *s.name,
+		Model:       s.name,
 		Messages:    json.RawMessage(messagesJSON),
 		Temperature: 0.0,
 		Stream:      false,

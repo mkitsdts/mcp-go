@@ -33,10 +33,9 @@ func getWeather(args map[string]any) (string, error) {
 }
 
 func Test_Tool() {
-	s := mcp.NewMCPService(mcp.API_NAME, mcp.API_HOST, "")
-	dialog := s.NewClient("查询天气")
+	s := mcp.NewMCPClient(mcp.API_NAME, mcp.API_HOST, "")
 	// 添加天气查询工具
-	dialog.AddTool(
+	s.AddTool(
 		"weather_query",
 		"查询指定位置的天气情况",
 		mcp.Paramaters{
@@ -56,7 +55,7 @@ func Test_Tool() {
 		getWeather,
 	)
 	// 添加华氏度转换工具
-	dialog.AddTool(
+	s.AddTool(
 		"celsius_to_fahrenheit",
 		"将摄氏度转换为华氏度",
 		mcp.Paramaters{
@@ -82,18 +81,18 @@ func Test_Tool() {
 
 	// 测试1：直接查询天气
 	fmt.Println("\n--- 测试1：查询北京天气 ---")
-	resp1, err := dialog.Chat("我要查询北京的天气，然后把摄氏度转换成华氏度")
+	resp1, err := s.Chat("我要查询北京的天气，然后把摄氏度转换成华氏度")
 	if err != nil {
 		fmt.Println("resp1:", resp1)
 		log.Fatalf("查询失败: %v", err)
 	}
 	fmt.Printf("模型回复: %s\n", resp1)
 
-	dialog.ClearHistory()
+	s.ClearHistory()
 
 	// 测试2:无需工具调用
 	fmt.Println("\n--- 测试2：问候 ---")
-	resp2, err := dialog.Chat("你好")
+	resp2, err := s.Chat("你好")
 	if err != nil {
 		log.Fatalf("操作失败: %v", err)
 	}
@@ -102,14 +101,13 @@ func Test_Tool() {
 
 func Test_File() {
 	// 初始化服务
-	s := mcp.NewMCPService("qwen3-14b", "http://localhost:1234/v1/chat/completions", "")
-	dialog := s.NewClient("文件测试")
-	if err := dialog.AddFile("./README.md"); err != nil {
+	s := mcp.NewMCPClient("qwen3-14b", "http://localhost:1234/v1/chat/completions", "")
+	if err := s.AddFile("./README.md"); err != nil {
 		panic(err)
 	}
 	// 测试1:添加文件
 	fmt.Println("\n--- 测试1：添加文件 ---")
-	resp1, err := dialog.Chat("请帮我做个摘要")
+	resp1, err := s.Chat("请帮我做个摘要")
 	if err != nil {
 		log.Fatalf("操作失败: %v", err)
 	}

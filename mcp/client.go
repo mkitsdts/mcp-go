@@ -8,15 +8,31 @@ import (
 )
 
 type MCPClient struct {
-	client     http.Client
-	context    []req_mess
-	files      map[string]string
-	tools      []Tool
-	host       *string
-	key        *string
-	name       *string
-	golbaltool *[]Tool
-	golbalfile *map[string]string
+	index   int
+	client  []*http.Client
+	context []req_mess
+	files   map[string]string
+	tools   []Tool
+	host    string
+	key     string
+	name    string
+}
+
+func (s *MCPClient) GetHTTPClient() *http.Client {
+	s.index = (s.index + 1) % len(s.client)
+	return s.client[s.index]
+}
+
+func NewMCPClient(name string, host string, key string) *MCPClient {
+	return &MCPClient{
+		client:  make([]*http.Client, MAX_HTTP_CLIENT_CONNECTIONS),
+		context: make([]req_mess, 0),
+		files:   make(map[string]string),
+		tools:   make([]Tool, 0),
+		host:    host,
+		key:     key,
+		name:    name,
+	}
 }
 
 const MAX_FILE_SIZE int64 = 10 * 1024 * 1024 // 10MB
@@ -86,13 +102,8 @@ func (s *MCPClient) Chat(context string) (string, error) {
 }
 
 func (s *MCPClient) AddTool(name string, description string, parameters Paramaters, handler func(args map[string]any) (string, error)) error {
-	if len(s.tools)+len(*s.golbaltool) > 10 {
+	if len(s.tools) > 10 {
 		return fmt.Errorf("exceeded maximum number of tools (10)")
-	}
-	for i := range *s.golbaltool {
-		if (*s.golbaltool)[i].Function.Name == name {
-			return nil
-		}
 	}
 	for i := range s.tools {
 		if s.tools[i].Function.Name == name {
